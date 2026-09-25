@@ -56,9 +56,16 @@ static class Rides
     const byte RideEvent = 181;
     const byte DismountEvent = 182;
     const byte InputEvent = 183;
+    const byte StaminaEvent = 184;
     const float MaxMountDistance = 4f;
     const float InputInterval = 0.05f;
     const float InputTimeout = 0.5f;
+    const float SprintStamina = 0.05f;
+    const float JumpStamina = 0.05f;
+    const float SprintJumpStamina = 0.15f;
+    const float LungeStamina = 0.2f;
+    const float DismountDistance = 1.2f;
+    const float StandingCenterHeight = 0.9f;
 
     static readonly Dictionary<int, int> riders = new();
     static readonly Dictionary<Character, Character> attached = new();
@@ -124,6 +131,17 @@ static class Rides
             case InputEvent:
                 var data = (object[])photonEvent.CustomData;
                 Receive((int)data[0], RideInput.FromEvent(data));
+                var zombie = Find<Character>((int)data[0]);
+                if (zombie != null && zombie.photonView.IsMine)
+                    PhotonNetwork.RaiseEvent(
+                        StaminaEvent, new object[] { (int)data[0], zombie.data.currentStamina },
+                        new RaiseEventOptions { TargetActors = [photonEvent.Sender] }, SendOptions.SendUnreliable);
+                break;
+            case StaminaEvent:
+                var stamina = (object[])photonEvent.CustomData;
+                var mount = Find<Character>((int)stamina[0]);
+                if (mount != null)
+                    mount.data.currentStamina = (float)stamina[1];
                 break;
         }
     }
@@ -168,8 +186,9 @@ static class Rides
         if (fresh)
             character.data.lookValues = input.Look;
         if (input.Attacks != state.Applied.Attacks && character.data.isGrounded
-            && zombie.currentState is MushroomZombie.State.LungeRecovery)
+            && zombie.currentState is MushroomZombie.State.LungeRecovery && character.GetTotalStamina() >= LungeStamina)
         {
+            character.UseStamina(LungeStamina);
             zombie.lungeTargetForward = character.Center + character.data.lookDirection * 100f;
             character.input.jumpWasPressed = true;
             zombie.currentState = MushroomZombie.State.Lunging;
@@ -179,13 +198,16 @@ static class Rides
         {
             character.input.movementInput = input.Move;
             character.input.sprintIsPressed = input.Sprint;
+            if (character.data.isGrounded && character.data.isSprinting)
+                character.UseStamina(SprintStamina * Time.deltaTime);
             if (input.Jumps != state.Applied.Jumps)
-                character.input.jumpWasPressed = true;
-            if (character.data.isClimbing)
             {
-                character.data.currentStamina = 1f;
-                character.input.usePrimaryWasReleased = state.Applied.Climb && !input.Climb;
+                character.input.jumpWasPressed = true;
+                if (character.data.isGrounded)
+                    character.UseStamina(character.data.isSprinting ? SprintJumpStamina : JumpStamina);
             }
+            if (character.data.isClimbing)
+                character.input.usePrimaryWasReleased = state.Applied.Climb && !input.Climb;
             else if (input.Climb)
                 character.refs.climbing.TryClimb();
         }
@@ -230,8 +252,11 @@ static class Rides
             if (!wanted.TryGetValue(rider, out var carrier) || carrier != zombie)
             {
                 attached.Remove(rider);
-                if (rider != null)
-                    SetCarrier(rider, null);
+                if (rider == null)
+                    continue;
+                SetCarrier(rider, null);
+                if (rider.IsLocal && zombie != null && DismountSpot(zombie) is Vector3 spot)
+                    rider.WarpPlayer(spot, poof: false);
             }
         foreach (var (rider, zombie) in wanted)
             if (!attached.ContainsKey(rider))
@@ -239,6 +264,21 @@ static class Rides
                 attached[rider] = zombie;
                 SetCarrier(rider, zombie);
             }
+    }
+
+    static Vector3? DismountSpot(Character zombie)
+    {
+        var back = -zombie.data.lookDirection_Flat;
+        var side = Vector3.Cross(Vector3.up, back);
+        foreach (var direction in new[] { back, side, -side, -back })
+        {
+            var spot = zombie.Center + direction * DismountDistance;
+            if (HelperFunctions.LineCheck(zombie.Center, spot + direction * 0.3f, HelperFunctions.LayerType.TerrainMap).transform)
+                continue;
+            var ground = HelperFunctions.LineCheck(spot + Vector3.up, spot + Vector3.down * 3f, HelperFunctions.LayerType.TerrainMap);
+            return ground.transform ? ground.point + Vector3.up * StandingCenterHeight : spot;
+        }
+        return null;
     }
 
     static void SetCarrier(Character rider, Character carrier)

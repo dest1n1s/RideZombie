@@ -1,4 +1,3 @@
-using BepInEx.Configuration;
 using UnityEngine;
 
 namespace RideZombie;
@@ -14,13 +13,14 @@ static class RidePose
         (BodypartType.Leg_R, BodypartType.Knee_R, BodypartType.Foot_R, 1f),
     ];
 
-    public static ConfigEntry<bool> SitOnShoulders;
-    public static ConfigEntry<float> SeatHeight;
-    public static ConfigEntry<float> SeatBack;
-    public static ConfigEntry<float> LegRaise;
-    public static ConfigEntry<float> LegSpread;
+    const float SeatHeight = 0.05f;
+    const float SeatBack = 0.15f;
+    const float LegRaise = 70f;
+    const float LegSpread = 50f;
 
-    static Character SeatedOn(Character rider) => SitOnShoulders.Value ? Rides.MountOf(rider) : null;
+    static readonly bool SitOnShoulders = false;
+
+    static Character SeatedOn(Character rider) => SitOnShoulders ? Rides.MountOf(rider) : null;
 
     public static bool Face(Character rider)
     {
@@ -34,11 +34,11 @@ static class RidePose
     {
         if (Rides.MountOf(rider) is not { } zombie)
             return false;
-        rider.refs.animations.SetBool("IsCarried", !SitOnShoulders.Value);
-        if (!SitOnShoulders.Value)
+        rider.refs.animations.SetBool("IsCarried", !SitOnShoulders);
+        if (!SitOnShoulders)
             return false;
         var seat = zombie.GetBodypart(BodypartType.Head).transform.position
-            + Vector3.up * SeatHeight.Value - zombie.data.lookDirection_Flat * SeatBack.Value;
+            + Vector3.up * SeatHeight - zombie.data.lookDirection_Flat * SeatBack;
         var hip = rider.GetBodypart(BodypartType.Hip).transform.position;
         rider.AddForce(Vector3.ClampMagnitude(seat + zombie.data.avarageVelocity * 0.06f - hip, 1f) * CarryForce);
         rider.refs.movement.ApplyExtraDrag(0.5f, ignoreRagdoll: true);
@@ -54,8 +54,8 @@ static class RidePose
         var shin = body * (Vector3.down + Vector3.forward * ShinReach);
         foreach (var (leg, knee, foot, side) in Legs)
         {
-            var thigh = body * Quaternion.AngleAxis(side * LegSpread.Value, Vector3.forward)
-                * Quaternion.AngleAxis(-LegRaise.Value, Vector3.right) * Vector3.down;
+            var thigh = body * Quaternion.AngleAxis(side * LegSpread, Vector3.forward)
+                * Quaternion.AngleAxis(-LegRaise, Vector3.right) * Vector3.down;
             Aim(rider.GetBodypart(leg).transform, rider.GetBodypart(knee).transform, thigh);
             Aim(rider.GetBodypart(knee).transform, rider.GetBodypart(foot).transform, shin);
         }

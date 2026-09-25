@@ -20,12 +20,6 @@ public class Plugin : BaseUnityPlugin, IOnEventCallback
             "Press F8 to spawn a friendly, rideable zombie in front of you.");
         RideCamera.Distance = Config.Bind("Camera", "Distance", 4f, "How far behind the zombie the camera sits while riding.");
         RideCamera.Height = Config.Bind("Camera", "Height", 1f, "How far above the zombie the camera looks from while riding.");
-        RidePose.SitOnShoulders = Config.Bind("Pose", "SitOnShoulders", true,
-            "Sit upright on the zombie's shoulders; off hangs you over its back like a carried scout.");
-        RidePose.SeatHeight = Config.Bind("Pose", "SeatHeight", 0.05f, "Height of your hips above the zombie's head joint.");
-        RidePose.SeatBack = Config.Bind("Pose", "SeatBack", 0.15f, "How far behind the zombie's head joint your hips sit.");
-        RidePose.LegRaise = Config.Bind("Pose", "LegRaise", 70f, "Degrees your thighs are lifted forward from hanging straight down.");
-        RidePose.LegSpread = Config.Bind("Pose", "LegSpread", 50f, "Degrees your thighs are spread apart.");
         new Harmony(Guid).PatchAll();
         PhotonNetwork.AddCallbackTarget(this);
     }
@@ -35,6 +29,7 @@ public class Plugin : BaseUnityPlugin, IOnEventCallback
         if (PhotonNetwork.InRoom)
         {
             Rides.Tick();
+            ZombieStaminaBar.Tick();
             if (testZombieKey.Value)
                 TestZombie.Tick();
         }
