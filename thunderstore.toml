@@ -1,0 +1,27 @@
+[config]
+schemaVersion = "0.0.1"
+
+[package]
+namespace = "Dest1n1"
+name = "RideZombie"
+versionNumber = "0.1.0"
+description = "Ride mushroom zombies: look at a standing zombie and press E to climb on its back, then steer it with your normal controls. The host and every rider need the mod."
+websiteUrl = ""
+containsNsfwContent = false
+[package.dependencies]
+BepInEx-BepInExPack_PEAK = "5.4.75301"
+
+[build]
+icon = "./icon.png"
+readme = "./README.md"
+outdir = "./build"
+
+[[build.copy]]
+source = "./bin/Release/RideZombie.dll"
+target = "RideZombie.dll"
+
+[publish]
+repository = "https://thunderstore.io"
+communities = [ "peak" ]
+[publish.categories]
+peak = [ "mods", "gameplay", "all" ]
