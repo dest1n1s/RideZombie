@@ -16,6 +16,9 @@ Ride the mushroom zombies in PEAK.
 You are thrown off when the zombie falls over or dies, and when you pass out. A wild zombie starts chasing
 again a few seconds after you get off.
 
+The camera switches to third person while riding (`[Camera]` in the config). The zombie has its own stamina,
+shown in a dark green bar above yours: sprinting, jumping, climbing and lunging use it.
+
 ## Multiplayer
 
 The host and every player who wants to ride need the mod. Players without it can still join, but see riders

@@ -7,7 +7,7 @@ using Photon.Realtime;
 
 namespace RideZombie;
 
-[BepInPlugin(Guid, "RideZombie", "0.1.1")]
+[BepInPlugin(Guid, "RideZombie", "0.1.2")]
 public class Plugin : BaseUnityPlugin, IOnEventCallback
 {
     const string Guid = "dest1n1.RideZombie";
