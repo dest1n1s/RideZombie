@@ -102,6 +102,8 @@ static class Rides
 
     public static bool IsRiding(Character character) => ZombieRiddenBy(character.photonView.ViewID) != null;
 
+    public static Character MountOf(Character rider) => attached.TryGetValue(rider, out var zombie) ? zombie : null;
+
     public static bool CanRide(Character rider, MushroomZombie zombie) =>
         !riders.ContainsKey(zombie.photonView.ViewID) && !IsRiding(rider)
         && Upright(zombie) && Conscious(rider)

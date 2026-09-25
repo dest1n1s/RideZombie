@@ -27,6 +27,7 @@
     <Reference Include="$(ManagedDir)/UnityEngine.CoreModule.dll" Private="false" />
     <Reference Include="$(ManagedDir)/UnityEngine.PhysicsModule.dll" Private="false" />
     <Reference Include="$(ManagedDir)/Unity.InputSystem.dll" Private="false" />
+    <Reference Include="$(ManagedDir)/Zorro.Core.Runtime.dll" Private="false" />
   </ItemGroup>
 
   <Target Name="Deploy" AfterTargets="Build" Condition="'$(PluginsDir)' != ''">

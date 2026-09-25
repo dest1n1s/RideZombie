@@ -51,6 +51,30 @@ static class ZombieSteering
     static void Postfix(MushroomZombie __instance) => Rides.Steer(__instance);
 }
 
+[HarmonyPatch(typeof(MainCameraMovement), nameof(MainCameraMovement.CharacterCam))]
+static class RiderCamera
+{
+    static void Postfix(MainCameraMovement __instance) => RideCamera.Follow(__instance.transform);
+}
+
+[HarmonyPatch(typeof(Character), nameof(Character.SetRotation))]
+static class RiderFacing
+{
+    static bool Prefix(Character __instance) => !RidePose.Face(__instance);
+}
+
+[HarmonyPatch(typeof(CharacterCarrying), nameof(CharacterCarrying.GetCarried))]
+static class RiderSeat
+{
+    static bool Prefix(CharacterCarrying __instance) => !RidePose.Carry(__instance.character);
+}
+
+[HarmonyPatch(typeof(CharacterAnimations), nameof(CharacterAnimations.ConfigureIK))]
+static class RiderLegs
+{
+    static void Postfix(CharacterAnimations __instance) => RidePose.Straddle(__instance.character);
+}
+
 [HarmonyPatch(typeof(MushroomZombie), nameof(MushroomZombie.DoLunging))]
 static class RiddenLunge
 {
