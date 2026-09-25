@@ -15,23 +15,25 @@ readonly struct RideInput
     public readonly bool Sprint;
     public readonly bool Climb;
     public readonly int Jumps;
+    public readonly int Attacks;
 
-    public RideInput(Vector2 move, Vector2 look, bool sprint, bool climb, int jumps)
+    public RideInput(Vector2 move, Vector2 look, bool sprint, bool climb, int jumps, int attacks)
     {
         Move = move;
         Look = look;
         Sprint = sprint;
         Climb = climb;
         Jumps = jumps;
+        Attacks = attacks;
     }
 
-    public RideInput Idle() => new(Vector2.zero, Look, false, false, Jumps);
+    public RideInput Idle() => new(Vector2.zero, Look, false, false, Jumps, Attacks);
 
-    public object[] ToEvent(int zombieId) => [zombieId, Move.x, Move.y, Look.x, Look.y, Sprint, Climb, Jumps];
+    public object[] ToEvent(int zombieId) => [zombieId, Move.x, Move.y, Look.x, Look.y, Sprint, Climb, Jumps, Attacks];
 
     public static RideInput FromEvent(object[] data) =>
         new(new Vector2((float)data[1], (float)data[2]), new Vector2((float)data[3], (float)data[4]),
-            (bool)data[5], (bool)data[6], (int)data[7]);
+            (bool)data[5], (bool)data[6], (int)data[7], (int)data[8]);
 }
 
 readonly struct Steering
@@ -80,7 +82,8 @@ static class Rides
             {
                 var zombie = Find<MushroomZombie>(zombieId);
                 var rider = Find<Character>(riderId);
-                if (zombie == null || rider == null || !Upright(zombie) || !Conscious(rider))
+                if (zombie == null || rider == null || !Conscious(rider)
+                    || !(Upright(zombie) || zombie.currentState is MushroomZombie.State.Lunging))
                     Publish(zombieId, null);
             }
         else
@@ -135,7 +138,8 @@ static class Rides
             RequestDismount(local);
         captured = new RideInput(
             input.movementInput, default, input.sprintIsPressed, input.usePrimaryIsPressed,
-            captured.Jumps + (input.jumpWasPressed ? 1 : 0));
+            captured.Jumps + (input.jumpWasPressed ? 1 : 0),
+            captured.Attacks + (input.useSecondaryWasPressed ? 1 : 0));
         var look = input.lookInput;
         input.ResetInput();
         input.lookInput = look;
@@ -159,20 +163,48 @@ static class Rides
         var fresh = Time.time - state.ReceivedAt <= InputTimeout;
         var input = fresh ? state.Latest : state.Latest.Idle();
         var character = zombie.character;
-        character.input.movementInput = input.Move;
         if (fresh)
             character.data.lookValues = input.Look;
-        character.input.sprintIsPressed = input.Sprint;
-        if (input.Jumps != state.Applied.Jumps)
-            character.input.jumpWasPressed = true;
-        if (character.data.isClimbing)
+        if (input.Attacks != state.Applied.Attacks && character.data.isGrounded
+            && zombie.currentState is MushroomZombie.State.LungeRecovery)
         {
-            character.data.currentStamina = 1f;
-            character.input.usePrimaryWasReleased = state.Applied.Climb && !input.Climb;
+            zombie.lungeTargetForward = character.Center + character.data.lookDirection * 100f;
+            character.input.jumpWasPressed = true;
+            zombie.currentState = MushroomZombie.State.Lunging;
+            zombie.timeSpentLunging = 0f;
         }
-        else if (input.Climb)
-            character.refs.climbing.TryClimb();
+        else if (zombie.currentState is not MushroomZombie.State.Lunging)
+        {
+            character.input.movementInput = input.Move;
+            character.input.sprintIsPressed = input.Sprint;
+            if (input.Jumps != state.Applied.Jumps)
+                character.input.jumpWasPressed = true;
+            if (character.data.isClimbing)
+            {
+                character.data.currentStamina = 1f;
+                character.input.usePrimaryWasReleased = state.Applied.Climb && !input.Climb;
+            }
+            else if (input.Climb)
+                character.refs.climbing.TryClimb();
+        }
         steering[zombieId] = new Steering(state.Latest, state.ReceivedAt, input);
+    }
+
+    public static bool LandLunge(MushroomZombie zombie)
+    {
+        if (!riders.ContainsKey(zombie.photonView.ViewID) || zombie.timeSpentLunging + Time.deltaTime < zombie.lungeTime)
+            return false;
+        zombie.timeSpentLunging = 0f;
+        zombie.currentState = MushroomZombie.State.LungeRecovery;
+        return true;
+    }
+
+    public static void Bite(MushroomZombie biter, Collider other)
+    {
+        if (riders.ContainsKey(biter.photonView.ViewID)
+            && CharacterRagdoll.TryGetCharacterFromCollider(other, out var victim) && victim != biter.character
+            && victim.photonView.IsMine && victim.TryGetComponent(out MushroomZombie _) && victim.data.fallSeconds <= 0f)
+            victim.Fall(biter.biteStunTime);
     }
 
     static bool Upright(MushroomZombie zombie) =>
@@ -222,7 +254,8 @@ static class Rides
         var zombie = Find<MushroomZombie>(zombieId);
         if (zombie == null)
             return;
-        var input = new RideInput(captured.Move, local.data.lookValues, captured.Sprint, captured.Climb, captured.Jumps);
+        var input = new RideInput(
+            captured.Move, local.data.lookValues, captured.Sprint, captured.Climb, captured.Jumps, captured.Attacks);
         if (zombie.photonView.IsMine)
             Receive(zombieId, input);
         else if (Time.time >= nextSend)

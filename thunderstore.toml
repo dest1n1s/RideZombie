@@ -4,7 +4,7 @@ schemaVersion = "0.0.1"
 [package]
 namespace = "Dest1n1"
 name = "RideZombie"
-versionNumber = "0.1.0"
+versionNumber = "0.1.1"
 description = "Ride mushroom zombies: look at a standing zombie and press E to climb on its back, then steer it with your normal controls. The host and every rider need the mod."
 websiteUrl = ""
 containsNsfwContent = false

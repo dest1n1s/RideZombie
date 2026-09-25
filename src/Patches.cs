@@ -1,4 +1,5 @@
 using HarmonyLib;
+using UnityEngine;
 
 namespace RideZombie;
 
@@ -48,4 +49,16 @@ static class RiderInput
 static class ZombieSteering
 {
     static void Postfix(MushroomZombie __instance) => Rides.Steer(__instance);
+}
+
+[HarmonyPatch(typeof(MushroomZombie), nameof(MushroomZombie.DoLunging))]
+static class RiddenLunge
+{
+    static bool Prefix(MushroomZombie __instance) => !Rides.LandLunge(__instance);
+}
+
+[HarmonyPatch(typeof(MushroomZombieBiteCollider), nameof(MushroomZombieBiteCollider.OnTriggerEnter))]
+static class ZombieBite
+{
+    static void Postfix(MushroomZombieBiteCollider __instance, Collider other) => Rides.Bite(__instance.parentZombie, other);
 }

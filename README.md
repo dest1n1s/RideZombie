@@ -10,6 +10,7 @@ Ride the mushroom zombies in PEAK.
 | Steer | Move and look as usual |
 | Sprint / jump | **Shift** / **Space** |
 | Climb | Hold **left mouse** |
+| Lunge and bite | **Right mouse** |
 | Get off | **E** |
 
 You are thrown off when the zombie falls over or dies, and when you pass out. A wild zombie starts chasing
